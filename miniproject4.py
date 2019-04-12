@@ -5,7 +5,6 @@ Created on Tue Apr  9 21:47:17 2019
 @author: Sarah
 """
 import csv
-import numpy as np
 import textdistance
 from nltk.tokenize import word_tokenize 
 from nltk.corpus import stopwords
@@ -88,50 +87,103 @@ class corpus_classifier:
     
     def edit_distance_preprocess(self, x):
         stop_words = set(stopwords.words('english'))
+        preprocessed1 = []
         for pair in x:
+            finalpair = []
             for sentence in pair:
                 sentence = sentence.lower()
                 sentence = word_tokenize(sentence)
                 sentence = [w for w in sentence if not w in stop_words]
-                
-        for pair in x:
+                finalpair.append(sentence)
+            preprocessed1.append(finalpair)
+            
+        preprocessed2 = []
+        for pair in preprocessed1:
+            finalpair= []
             for sentence in pair:
                 final = ''
                 for word in sentence:
-                    final += word
-                sentence = final
+                    if(word != '.'):
+                        final += word
+                        final += ' '
+                    if(word == '.'):
+                        final = final[:-1]
+                finalpair.append(final)
+            preprocessed2.append(finalpair)
         
-        return x
+        return preprocessed2
     
-    def jaro_winkler_train(self, x, y):
-        x_train = []
-        for pair in x:
+    def jaro_winkler_classifier(self, x_train, y_train, x_test):
+        x_dist = [550152]
+        y_test = [10000]
+        
+        for pair in x_train:
             dist = textdistance.jaro_winkler(pair[0], pair[1])
-            x_train.append(dist)
-            
-        return x
+            x_dist.append(dist)
+        
+        for pair in x_test:
+            dist = textdistance.jaro_winkler(pair[0], pair[1])
+            diff = 10000
+            index = 0
+            for train_dist in x_dist:
+                if(abs(train_dist-dist) < diff):
+                    diff = abs(train_dist-dist)
+                    index = x_dist.index(train_dist)
+            y_test.append(y_train[index])  
+        
+        y_test = y_test[1:]
+        return y_test
     
-    def levenshtein_train(self, x, y):
-        x_train = []
-        for pair in x:
+    def levenshtein_classifier(self, x_train, y_train, x_test):
+        x_dist = []
+        y_test = []
+        for pair in x_train:
             dist = textdistance.levenshtein.normalized_similarity(pair[0], pair[1])
-            x_train.append(dist)
-        
-        return x
+            x_dist.append(dist)
             
-    def hamming_train(self, x, y):
-        x_train = []
-        for pair in x:
+        for pair in x_test:
+            dist = textdistance.levenshtein.normalized_similarity(pair[0], pair[1])
+            diff = 1000000
+            index = 0
+            for train_dist in x_dist:
+                if(abs(train_dist-dist) < diff):
+                    diff = abs(train_dist-dist)
+                    index = x_dist.index(train_dist)
+            y_test.append(y_train[index])  
+        
+        y_test = y_test[1:]
+        return y_test
+            
+    def hamming_classifier(self, x_train, y_train, x_test):
+        x_dist = []
+        y_test = []
+        for pair in x_train:
             dist = textdistance.hamming.normalized_similarity(pair[0], pair[1])
-            x_train.append(dist)
+            x_dist.append(dist)
             
-        return x
+        for pair in x_test:
+            dist = textdistance.hamming.normalized_similarity(pair[0], pair[1])
+            diff = 100000
+            index = 0
+            for train_dist in x_dist:
+                if(abs(train_dist-dist) < diff):
+                    diff = abs(train_dist-dist)
+                    index = x_dist.index(train_dist)
+            y_test.append(y_train[index])  
         
+        y_test = y_test[1:]
+        return y_test
         
-        
-        
-        
-        
-        
-    
+   
 #############################################################
+        
+test = corpus_classifier()
+x_train, y_train = test.load_training_data()
+x_val1, y_val = test.load_validation_data()
+
+x_train_final = test.edit_distance_preprocess(x_train)
+
+x_val_final = test.edit_distance_preprocess(x_val1)
+
+y_test = test.jaro_winkler_classifier(x_train_final, y_train, x_val_final)
+
